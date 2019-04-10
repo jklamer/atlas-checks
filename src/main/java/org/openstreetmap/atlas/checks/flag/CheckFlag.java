@@ -253,7 +253,7 @@ public class CheckFlag implements Iterable<Location>, Located, Serializable
     @Override
     public Rectangle bounds()
     {
-        return Rectangle.forLocated(new MultiIterable<>(this.getShapes()));
+        return Rectangle.forLocated(this.getFlaggedObjects());
     }
 
     @Override
