@@ -1,14 +1,14 @@
 package org.openstreetmap.atlas.checks.utility;
 
-import org.openstreetmap.atlas.checks.base.Check;
+import java.io.Serializable;
+
 import org.openstreetmap.atlas.checks.flag.CheckFlag;
 import org.openstreetmap.atlas.geography.Located;
 import org.openstreetmap.atlas.geography.Rectangle;
 
-import java.io.Serializable;
-
 /**
- * A located wrapper used for sorting {@link org.openstreetmap.atlas.checks.flag.CheckFlag}s while keeping their name;
+ * A located wrapper used for sorting {@link org.openstreetmap.atlas.checks.flag.CheckFlag}s while
+ * keeping their name;
  */
 public class NamedCheckFlag implements Located, Serializable
 {

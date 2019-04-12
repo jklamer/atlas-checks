@@ -1,10 +1,10 @@
 package org.openstreetmap.atlas.checks.event;
 
-import org.openstreetmap.atlas.checks.flag.CheckFlag;
+import java.util.Collection;
+
 import org.openstreetmap.atlas.checks.utility.NamedCheckFlag;
 import org.openstreetmap.atlas.geography.sharding.Shard;
-
-import java.util.Collection;
+import org.openstreetmap.atlas.event.Event;
 
 public class ShardFlagsBatchEvent extends Event
 {
@@ -13,6 +13,7 @@ public class ShardFlagsBatchEvent extends Event
 
     public ShardFlagsBatchEvent(final Shard shard, final Collection<NamedCheckFlag> batch)
     {
+        super();
         this.shard = shard;
         this.batch = batch;
     }
