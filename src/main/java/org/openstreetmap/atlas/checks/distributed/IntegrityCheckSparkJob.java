@@ -22,8 +22,9 @@ import org.openstreetmap.atlas.checks.constants.CommonConstants;
 import org.openstreetmap.atlas.checks.event.CheckFlagFileProcessor;
 import org.openstreetmap.atlas.checks.event.CheckFlagGeoJsonProcessor;
 import org.openstreetmap.atlas.checks.event.CheckFlagTippecanoeProcessor;
-import org.openstreetmap.atlas.checks.event.EventService;
+import org.openstreetmap.atlas.event.EventService;
 import org.openstreetmap.atlas.checks.event.MetricFileGenerator;
+import org.openstreetmap.atlas.checks.event.ShardFlagBatchProcessor;
 import org.openstreetmap.atlas.checks.maproulette.MapRouletteClient;
 import org.openstreetmap.atlas.checks.maproulette.MapRouletteConfiguration;
 import org.openstreetmap.atlas.exception.CoreException;
@@ -70,7 +71,8 @@ public class IntegrityCheckSparkJob extends SparkJob
         FLAGS,
         GEOJSON,
         METRICS,
-        TIPPECANOE
+        TIPPECANOE,
+        PRIORITY
     }
 
     @Deprecated
@@ -101,10 +103,11 @@ public class IntegrityCheckSparkJob extends SparkJob
             csv_formats -> Stream.of(csv_formats.split(","))
                     .map(format -> Enum.valueOf(OutputFormats.class, format.toUpperCase()))
                     .collect(Collectors.toSet()),
-            Optionality.OPTIONAL, "flags,metrics");
+            Optionality.OPTIONAL, "flags,metrics,");
     private static final Switch<List<String>> CHECK_FILTER = new Switch<>("checkFilter",
             "Comma-separated list of checks to run",
             checks -> Arrays.asList(checks.split(CommonConstants.COMMA)), Optionality.OPTIONAL);
+    private static final Switch<Integer> NUMBER_OF_PRIORITY_AREAS = new Switch<>("numberPrioritizedAreas", "Number of top prioritized areas to take action on", Integer::valueOf, Optionality.OPTIONAL, "10");
 
     // Indicator key for ignored countries
     private static final String IGNORED_KEY = "Ignored";
@@ -112,6 +115,7 @@ public class IntegrityCheckSparkJob extends SparkJob
     private static final String OUTPUT_FLAG_FOLDER = "flag";
     private static final String OUTPUT_GEOJSON_FOLDER = "geojson";
     private static final String OUTPUT_TIPPECANOE_FOLDER = "tippecanoe";
+    private static final String OUTPUT_PRIORITY_FOLDER = "priority";
     private static final String OUTPUT_ATLAS_FOLDER = "atlas";
     private static final String INTERMEDIATE_ATLAS_EXTENSION = FileSuffix.ATLAS.toString()
             + FileSuffix.GZIP.toString();
@@ -372,6 +376,17 @@ public class IntegrityCheckSparkJob extends SparkJob
                 tippecanoeOutput = null;
             }
 
+            final SparkFilePath priorityOutput;
+            if ( outputFormats.contains(OutputFormats.PRIORITY))
+            {
+                priorityOutput = initializeOutput(OUTPUT_PRIORITY_FOLDER, TaskContext.get(), country, temporaryOutputFolder, targetOutputFolder);
+                new ShardFlagBatchProcessor(fileHelper, priorityOutput.getTemporaryPath(), EventService.get(country), Rectangle.MAXIMUM);
+            }
+            else
+            {
+                priorityOutput = null;
+            }
+
             final Consumer<Atlas> intermediateAtlasHandler;
             if (saveIntermediateAtlas)
             {
@@ -401,7 +416,7 @@ public class IntegrityCheckSparkJob extends SparkJob
                 {
                     executeChecks(country, atlas, checks, mapRouletteConfiguration);
                     // Add output folders for handling later
-                    Stream.of(flagOutput, metricOutput, geoJsonOutput, tippecanoeOutput)
+                    Stream.of(flagOutput, metricOutput, geoJsonOutput, tippecanoeOutput, priorityOutput)
                             .filter(Objects::nonNull).forEach(resultingFiles::add);
                 }
 
@@ -484,7 +499,7 @@ public class IntegrityCheckSparkJob extends SparkJob
     {
         return super.switches().with(ATLAS_FOLDER, MAP_ROULETTE, COUNTRIES, CONFIGURATION_FILES,
                 CONFIGURATION_JSON, PBF_BOUNDING_BOX, PBF_SAVE_INTERMEDIATE_ATLAS, OUTPUT_FORMATS,
-                CHECK_FILTER);
+                CHECK_FILTER, NUMBER_OF_PRIORITY_AREAS);
     }
 
     /**

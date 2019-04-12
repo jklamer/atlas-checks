@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
  * @param <T>
  *            type that is going to be processed
  */
-public abstract class FileProcessor<T extends Event> implements Processor<T>
+public abstract class FileProcessor<T extends org.openstreetmap.atlas.event.Event> implements org.openstreetmap.atlas.event.Processor<T>
 {
     // Default number of events to batch
     public static final int BATCH_SIZE = 2500;

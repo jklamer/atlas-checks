@@ -22,7 +22,7 @@ import com.google.gson.JsonObject;
  *
  * @author brian_l_davis
  */
-public final class CheckFlagGeoJsonProcessor implements Processor<CheckFlagEvent>
+public final class CheckFlagGeoJsonProcessor implements org.openstreetmap.atlas.event.Processor<CheckFlagEvent>
 {
 
     private static final int MAX_BATCH_SUM = 25000;
@@ -111,7 +111,7 @@ public final class CheckFlagGeoJsonProcessor implements Processor<CheckFlagEvent
 
     @Override
     @Subscribe
-    public void process(final ShutdownEvent event)
+    public void process(final org.openstreetmap.atlas.event.ShutdownEvent event)
     {
         try
         {

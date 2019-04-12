@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
-import org.openstreetmap.atlas.checks.event.EventService;
+import org.openstreetmap.atlas.event.EventService;
 import org.openstreetmap.atlas.checks.event.ShardFlagsBatchEvent;
 import org.openstreetmap.atlas.checks.flag.FlaggedObject;
 import org.openstreetmap.atlas.exception.CoreException;
@@ -36,6 +36,7 @@ public class CheckFlagSorter extends ShardBucketCollection<NamedCheckFlag, HashS
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected boolean addFunction(final NamedCheckFlag item,
             final HashSet<NamedCheckFlag> collection, final Shard shard)
     {
@@ -43,7 +44,7 @@ public class CheckFlagSorter extends ShardBucketCollection<NamedCheckFlag, HashS
         {
             if (collection.size() >= BATCH_SIZE)
             {
-                this.eventService.post(new ShardFlagsBatchEvent(shard, collection));
+                this.eventService.post(new ShardFlagsBatchEvent(shard, (HashSet<NamedCheckFlag>) collection.clone()));
             }
             collection.clear();
             return super.addFunction(item, collection, shard);
