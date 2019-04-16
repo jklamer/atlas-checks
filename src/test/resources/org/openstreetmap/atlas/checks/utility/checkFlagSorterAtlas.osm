@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version='0.6' generator='JOSM'>
+  <node id='-110455' action='modify' lat='35.01423482615' lon='138.35625483303' />
+  <node id='-110456' action='modify' lat='35.01587531456' lon='138.36305301299' />
+  <node id='-110458' action='modify' lat='35.01388683953' lon='138.36499535012' />
+  <node id='-110460' action='modify' lat='35.00936287873' lon='138.36724117742' />
+  <node id='-110462' action='modify' lat='35.00588273862' lon='138.36007880926' />
+  <node id='-110518' action='modify' lat='35.0117118764' lon='138.39820111675' />
+  <node id='-110519' action='modify' lat='35.00929297374' lon='138.41166822864' />
+  <node id='-110606' action='modify' lat='34.98616465384' lon='138.38993183751' />
+  <node id='-110607' action='modify' lat='34.97648559304' lon='138.40339894941' />
+  <node id='-110609' action='modify' lat='34.97125842451' lon='138.40824238439' />
+  <node id='-110611' action='modify' lat='34.97271044923' lon='138.41733859154' />
+  <node id='-110619' action='modify' lat='34.98993917743' lon='138.37670099074' />
+  <node id='-110620' action='modify' lat='34.9900359578' lon='138.38674225838' />
+  <node id='-110622' action='modify' lat='34.98403535863' lon='138.37729165354' />
+  <node id='-110624' action='modify' lat='34.98413214598' lon='138.3869785235' />
+  <node id='-110632' action='modify' lat='35.00184230409' lon='138.3684317115'>
+    <tag k='addr:city' v='atlantis' />
+    <tag k='name' v='point1' />
+  </node>
+  <node id='-110633' action='modify' lat='35.00077786732' lon='138.38981370495'>
+    <tag k='addr:city' v='timbuktu' />
+    <tag k='name' v='point2' />
+  </node>
+  <node id='-110634' action='modify' lat='34.99110053429' lon='138.39111316312'>
+    <tag k='addr:city' v='El Dorado' />
+    <tag k='name' v='point3' />
+  </node>
+  <way id='-110457' action='modify'>
+    <nd ref='-110455' />
+    <nd ref='-110456' />
+    <nd ref='-110458' />
+    <nd ref='-110460' />
+    <nd ref='-110462' />
+    <tag k='highway' v='primary' />
+    <tag k='name' v='edge1' />
+  </way>
+  <way id='-110520' action='modify'>
+    <nd ref='-110518' />
+    <nd ref='-110519' />
+    <tag k='highway' v='primary' />
+    <tag k='name' v='edge2' />
+  </way>
+  <way id='-110608' action='modify'>
+    <nd ref='-110606' />
+    <nd ref='-110607' />
+    <nd ref='-110609' />
+    <nd ref='-110611' />
+    <tag k='highway' v='primary' />
+    <tag k='name' v='edge3' />
+  </way>
+  <way id='-110621' action='modify'>
+    <nd ref='-110619' />
+    <nd ref='-110620' />
+    <nd ref='-110622' />
+    <nd ref='-110624' />
+    <tag k='highway' v='primary' />
+    <tag k='name' v='edge4' />
+  </way>
+  <relation id='-127222' action='modify'>
+    <member type='way' ref='-110457' role='' />
+    <member type='node' ref='-110632' role='' />
+    <tag k='name' v='relation1' />
+    <tag k='type' v='site' />
+  </relation>
+  <relation id='-129583' action='modify'>
+    <member type='way' ref='-110457' role='' />
+    <member type='way' ref='-110520' role='' />
+    <member type='way' ref='-110608' role='' />
+    <tag k='name' v='relation2' />
+    <tag k='type' v='site' />
+  </relation>
+</osm>

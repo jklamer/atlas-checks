@@ -17,9 +17,9 @@ import org.openstreetmap.atlas.utilities.collections.ShardBucketCollection;
 
 public class CheckFlagSorter extends ShardBucketCollection<NamedCheckFlag, HashSet<NamedCheckFlag>>
 {
-    private static final int INITIAL_CAPACITY = 1000;
-    public static final int BATCH_SIZE = 1000;
-    private static final int ZOOM_LEVEL = 12;
+    public static final int BATCH_SIZE = 100;
+    private static final int INITIAL_CAPACITY = (int) (BATCH_SIZE / 0.75f) + 1;
+    private static final int ZOOM_LEVEL = 13;
 
     private final EventService eventService;
 
