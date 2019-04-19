@@ -252,6 +252,8 @@ public class IntegrityCheckSparkJob extends SparkJob
         final boolean compressOutput = Boolean
                 .valueOf((String) commandMap.get(SparkJob.COMPRESS_OUTPUT));
 
+        final Integer numberOfPrioritizedOutputs = (Integer) commandMap.get(NUMBER_OF_PRIORITY_AREAS);
+
         final Map<String, String> sparkContext = configurationMap();
         final CheckResourceLoader checkLoader = new CheckResourceLoader(checksConfiguration);
         // check configuration and country list
@@ -380,7 +382,7 @@ public class IntegrityCheckSparkJob extends SparkJob
             if ( outputFormats.contains(OutputFormats.PRIORITY))
             {
                 priorityOutput = initializeOutput(OUTPUT_PRIORITY_FOLDER, TaskContext.get(), country, temporaryOutputFolder, targetOutputFolder);
-                new ShardFlagBatchProcessor(fileHelper, priorityOutput.getTemporaryPath(), EventService.get(country), Rectangle.MAXIMUM);
+                new ShardFlagBatchProcessor(fileHelper, priorityOutput.getTemporaryPath(), EventService.get(country), Rectangle.MAXIMUM, numberOfPrioritizedOutputs);
             }
             else
             {

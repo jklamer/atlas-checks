@@ -45,8 +45,8 @@ public class CheckFlagSorter extends ShardBucketCollection<NamedCheckFlag, HashS
             if (collection.size() >= BATCH_SIZE)
             {
                 this.eventService.post(new ShardFlagsBatchEvent(shard, (HashSet<NamedCheckFlag>) collection.clone()));
+                collection.clear();
             }
-            collection.clear();
             return super.addFunction(item, collection, shard);
         }
     }

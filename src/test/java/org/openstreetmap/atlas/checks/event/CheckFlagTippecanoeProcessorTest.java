@@ -77,7 +77,7 @@ public class CheckFlagTippecanoeProcessorTest
         {
             processor.process(this.setup.getCheckFlagEvent());
         }
-        processor.process(new ShutdownEvent());
+        processor.process(new org.openstreetmap.atlas.event.ShutdownEvent());
 
         // Validate
         final List<Resource> files = FileSystemHelper.resources(tempDirectory.getAbsolutePath(),

@@ -2,18 +2,28 @@ package org.openstreetmap.atlas.checks.utility;
 
 import com.google.common.eventbus.Subscribe;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.openstreetmap.atlas.checks.event.ShardFlagsBatchEvent;
+import org.openstreetmap.atlas.checks.flag.CheckFlag;
+import org.openstreetmap.atlas.event.EventService;
 import org.openstreetmap.atlas.event.Processor;
 import org.openstreetmap.atlas.event.ShutdownEvent;
+import org.openstreetmap.atlas.geography.Rectangle;
+import org.openstreetmap.atlas.geography.atlas.items.AtlasEntity;
+import org.openstreetmap.atlas.geography.atlas.items.Edge;
+import org.openstreetmap.atlas.geography.atlas.items.ItemType;
+import org.openstreetmap.atlas.geography.sharding.SlippyTile;
 
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 public class CheckFlagSorterTest
 {
+
+    private static Rectangle testBounds = SlippyTile.forName("12-3622-1622").bounds();
 
     private static final class TestBatchProcessor implements Processor<ShardFlagsBatchEvent>
     {
@@ -28,16 +38,17 @@ public class CheckFlagSorterTest
             this.verifier = verifier;
         }
 
-        public void setExpectedBatches(final int expectedBatches)
+        public TestBatchProcessor setExpectedBatches(final int expectedBatches)
         {
             this.expectedBatches = expectedBatches;
+            return this;
         }
 
         @Override
         @Subscribe
         public void process(final ShutdownEvent event)
         {
-            Assert.assertEquals(this.expectedBatches, this.batchesActual.get());
+            Assert.assertEquals("Did not get the right number of Batches", this.expectedBatches, this.batchesActual.get());
         }
 
         @Override
@@ -50,12 +61,33 @@ public class CheckFlagSorterTest
     }
 
     @Rule
-    public final static CheckFlagSorterTestRule setup = new CheckFlagSorterTestRule();
+    public final CheckFlagSorterTestRule setup = new CheckFlagSorterTestRule();
 
 
     @Test
-    public void testSort()
+    public void testBatches()
     {
-        
+        final AtomicLong checkFlagId = new AtomicLong();
+        final EventService eventService = EventService.get("testBatches");
+        final Consumer<ShardFlagsBatchEvent> eventVerifier = shardFlagsBatchEvent -> Assert.assertEquals( shardFlagsBatchEvent.getShard(), SlippyTile.forName("13-7244-3244"));
+        final TestBatchProcessor processor = new TestBatchProcessor(eventVerifier).setExpectedBatches(5);
+        final CheckFlagSorter sorter = new CheckFlagSorter(testBounds, eventService);
+        eventService.register(processor);
+
+
+        final Edge edgeToFlag = (Edge) this.getEntityWithName(ItemType.EDGE, "edge1");
+
+        for(int i = 0; i < CheckFlagSorter.BATCH_SIZE * 5 + 1; i++ )
+        {
+            sorter.add(new NamedCheckFlag(new CheckFlag(String.valueOf(checkFlagId.getAndIncrement()),
+                    Collections.singleton(edgeToFlag), Collections.emptyList()), "MadeUpCheck"));
+        }
+        eventService.complete();
+    }
+
+
+    public AtlasEntity getEntityWithName(final ItemType itemType, final String name)
+    {
+        return this.setup.getAtlas().entities(atlasEntity -> atlasEntity.getType().equals(itemType) && atlasEntity.getTag("name").filter(name::equals).isPresent()).iterator().next();
     }
 }

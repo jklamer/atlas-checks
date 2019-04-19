@@ -2,7 +2,7 @@ package org.openstreetmap.atlas.checks.distributed;
 
 import org.apache.commons.lang.StringUtils;
 import org.openstreetmap.atlas.checks.base.Check;
-import org.openstreetmap.atlas.checks.event.EventService;
+import org.openstreetmap.atlas.event.EventService;
 import org.openstreetmap.atlas.checks.flag.CheckFlag;
 import org.openstreetmap.atlas.checks.maproulette.MapRouletteClient;
 import org.openstreetmap.atlas.checks.maproulette.data.Challenge;
