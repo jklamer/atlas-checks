@@ -12,7 +12,7 @@ import org.junit.Test;
 import org.openstreetmap.atlas.checks.event.CheckFlagEvent;
 import org.openstreetmap.atlas.checks.event.CheckFlagFileProcessor;
 import org.openstreetmap.atlas.checks.event.FileProcessor;
-import org.openstreetmap.atlas.checks.event.ShutdownEvent;
+import org.openstreetmap.atlas.event.ShutdownEvent;
 import org.openstreetmap.atlas.checks.maproulette.data.Challenge;
 import org.openstreetmap.atlas.checks.maproulette.data.Project;
 import org.openstreetmap.atlas.generator.tools.spark.utilities.SparkFileHelper;

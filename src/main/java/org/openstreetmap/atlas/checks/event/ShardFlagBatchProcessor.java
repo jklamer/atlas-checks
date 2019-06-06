@@ -1,13 +1,18 @@
 package org.openstreetmap.atlas.checks.event;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+import java.util.function.ToLongFunction;
 
 import com.google.common.eventbus.Subscribe;
 import com.google.gson.JsonObject;
@@ -95,6 +100,43 @@ public class ShardFlagBatchProcessor implements Processor<ShardFlagsBatchEvent>
         this.reportPriority();
     }
 
+    public ToLongFunction<Map.Entry<String,AtomicLong>> scoreExtracter()
+    {
+        final HashSet<String> checksToCount = new HashSet<>(Arrays.asList("SinkIslandCheck","FloatingEdgeCheck","DuplicateLocationInPolyLineCheck","SelfIntersectingPolylineCheck","OrphanNodeCheck","OverlappingEdgeCheck","IntersectingBuildingsCheck","MalformedPolyLineCheck"));
+        return entry ->
+        {
+            if(checksToCount.contains(entry.getKey()))
+            {
+                return entry.getValue().get();
+            }else
+            {
+                return 0L;
+            }
+        };
+    }
+
+    /**
+     *
+     *
+     * 1 DuplicateWaysCheck
+     *    1 InvalidMultiPolygonRelationCheck
+     *    1 SpikyBuildingCheck
+     *    2 InvalidGeometryCheck
+     *    2 LineCrossingBuildingCheck
+     *    3 ConnectivityCheck
+     *    3 SharpAngleCheck
+     *    4 EdgeCrossingEdgeCheck
+     *    5 BuildingRoadIntersectionCheck
+     *    5 ValenceOneImportantRoadCheck
+     *    6 MalformedPolyLineCheck
+     *   10 IntersectingBuildingsCheck
+     *   10 OverlappingEdgeCheck
+     *   14 OrphanNodeCheck
+     *   14 SelfIntersectingPolylineCheck
+     *   33 DuplicateLocationInPolyLineCheck
+     *   35 FloatingEdgeCheck
+     *  133 SinkIslandCheck
+     */
     public void reportPriority()
     {
         final PriorityQueue<Tuple<Shard, Long>> shardScores = new PriorityQueue<>((tuple1, tuple2) -> tuple2.getSecond().compareTo(tuple1.getSecond()));
@@ -103,7 +145,7 @@ public class ShardFlagBatchProcessor implements Processor<ShardFlagsBatchEvent>
             final Shard shard = mapEntry.getKey();
             final ConcurrentHashMap<String, AtomicLong> checkStats = mapEntry.getValue();
             // TODO, make this more flexible
-            final Long score = checkStats.reduceValuesToLong(1, AtomicLong::get, 0L, (long1, long2) -> long1 + long2);
+            final Long score = checkStats.reduceEntriesToLong(1, scoreExtracter(), 0L, (long1, long2) -> long1 + long2);
             shardScores.add(Tuple.createTuple(shard,score));
 
         });

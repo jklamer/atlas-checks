@@ -10,11 +10,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.spark.TaskContext;
 import org.apache.spark.api.java.JavaPairRDD;
+import org.openstreetmap.atlas.checks.atlas.CountrySpecificAtlasFilePathFilter;
 import org.openstreetmap.atlas.checks.base.BaseCheck;
 import org.openstreetmap.atlas.checks.base.CheckResourceLoader;
 import org.openstreetmap.atlas.checks.configuration.ConfigurationResolver;
@@ -28,6 +31,7 @@ import org.openstreetmap.atlas.checks.event.ShardFlagBatchProcessor;
 import org.openstreetmap.atlas.checks.maproulette.MapRouletteClient;
 import org.openstreetmap.atlas.checks.maproulette.MapRouletteConfiguration;
 import org.openstreetmap.atlas.exception.CoreException;
+import org.openstreetmap.atlas.generator.tools.filesystem.FileSystemHelper;
 import org.openstreetmap.atlas.generator.tools.spark.SparkJob;
 import org.openstreetmap.atlas.generator.tools.spark.utilities.SparkFileHelper;
 import org.openstreetmap.atlas.generator.tools.spark.utilities.SparkFileOutput;
@@ -38,6 +42,8 @@ import org.openstreetmap.atlas.geography.atlas.items.AtlasEntity;
 import org.openstreetmap.atlas.geography.atlas.items.Relation;
 import org.openstreetmap.atlas.geography.atlas.items.complex.ComplexEntity;
 import org.openstreetmap.atlas.geography.atlas.items.complex.Finder;
+import org.openstreetmap.atlas.geography.sharding.Shard;
+import org.openstreetmap.atlas.geography.sharding.SlippyTile;
 import org.openstreetmap.atlas.streaming.resource.FileSuffix;
 import org.openstreetmap.atlas.utilities.collections.Iterables;
 import org.openstreetmap.atlas.utilities.collections.MultiIterable;
@@ -46,6 +52,7 @@ import org.openstreetmap.atlas.utilities.configuration.Configuration;
 import org.openstreetmap.atlas.utilities.configuration.MergedConfiguration;
 import org.openstreetmap.atlas.utilities.configuration.StandardConfiguration;
 import org.openstreetmap.atlas.utilities.conversion.StringConverter;
+import org.openstreetmap.atlas.utilities.maps.MultiMap;
 import org.openstreetmap.atlas.utilities.runtime.CommandMap;
 import org.openstreetmap.atlas.utilities.scalars.Duration;
 import org.openstreetmap.atlas.utilities.threads.Pool;
@@ -117,6 +124,7 @@ public class IntegrityCheckSparkJob extends SparkJob
     private static final String OUTPUT_TIPPECANOE_FOLDER = "tippecanoe";
     private static final String OUTPUT_PRIORITY_FOLDER = "priority";
     private static final String OUTPUT_ATLAS_FOLDER = "atlas";
+    private static final String ATLAS_FILENAME_PATTERN_FORMAT = "^%s_([0-9]+)-([0-9]+)-([0-9]+)";
     private static final String INTERMEDIATE_ATLAS_EXTENSION = FileSuffix.ATLAS.toString()
             + FileSuffix.GZIP.toString();
     private static final String OUTPUT_METRIC_FOLDER = "metric";
@@ -185,6 +193,62 @@ public class IntegrityCheckSparkJob extends SparkJob
         }
 
         return Collections.emptyList();
+    }
+
+    /**
+     * Creates a map from country name to {@link List} of {@link Shard} definitions from
+     * {@link Atlas} files.
+     *
+     * @param countries
+     *            Set of countries to find out shards for
+     * @param pathResolver
+     *            {@link AtlasFilePathResolver} to search for {@link Atlas} files
+     * @param atlasFolder
+     *            Path to {@link Atlas} folder
+     * @param sparkContext
+     *            Spark context (or configuration) as a key-value map
+     * @return A map from country name to {@link List} of {@link Shard} definitions
+     */
+    public static MultiMap<String, Shard> countryShardMapFromShardFiles(final Set<String> countries,
+            final AtlasFilePathResolver pathResolver, final String atlasFolder,
+            final Map<String, String> sparkContext)
+    {
+        final MultiMap<String, Shard> countryShardMap = new MultiMap<>();
+        logger.info("Building country shard map from country shard files.");
+
+        countries.forEach(country -> {
+            final String countryDirectory = pathResolver.resolvePath(atlasFolder, country);
+            final CountrySpecificAtlasFilePathFilter filter = new CountrySpecificAtlasFilePathFilter(
+                    country);
+            final Pattern filePattern = Pattern
+                    .compile(String.format(ATLAS_FILENAME_PATTERN_FORMAT, country));
+            // Go over shard files for the country and use file name pattern to find out shards
+            FileSystemHelper.listResourcesRecursively(countryDirectory, sparkContext, filter)
+                    .forEach(shardFile -> {
+                        final String shardFileName = shardFile.getName();
+                        final Matcher matcher = filePattern.matcher(shardFileName);
+                        if (matcher.find())
+                        {
+                            try
+                            {
+                                final String zoomString = matcher.group(1);
+                                final String xString = matcher.group(2);
+                                final String yString = matcher.group(3);
+                                countryShardMap.add(country,
+                                        new SlippyTile(Integer.parseInt(xString),
+                                                Integer.parseInt(yString),
+                                                Integer.parseInt(zoomString)));
+                            }
+                            catch (final Exception e)
+                            {
+                                logger.warn(String.format("Couldn't parse shard file name %s.",
+                                        shardFileName), e);
+                            }
+                        }
+                    });
+        });
+
+        return countryShardMap;
     }
 
     private static SparkFilePath initializeOutput(final String output, final TaskContext context,
@@ -263,6 +327,9 @@ public class IntegrityCheckSparkJob extends SparkJob
             logger.error("No countries supplied or checks enabled, exiting!");
             return;
         }
+
+        final MultiMap<String, Shard> countryShardMap = countryShardMapFromShardFiles(countries.stream().collect(
+                Collectors.toSet()),  new AtlasFilePathResolver(checksConfiguration),input, sparkContext);
 
         // Read priority countries from the configuration
         final List<String> priorityCountries = checksConfiguration
@@ -381,8 +448,15 @@ public class IntegrityCheckSparkJob extends SparkJob
             final SparkFilePath priorityOutput;
             if ( outputFormats.contains(OutputFormats.PRIORITY))
             {
-                priorityOutput = initializeOutput(OUTPUT_PRIORITY_FOLDER, TaskContext.get(), country, temporaryOutputFolder, targetOutputFolder);
-                new ShardFlagBatchProcessor(fileHelper, priorityOutput.getTemporaryPath(), EventService.get(country), Rectangle.MAXIMUM, numberOfPrioritizedOutputs);
+                if(countryShardMap.get(country).size() > 0)
+                {
+                    priorityOutput = initializeOutput(OUTPUT_PRIORITY_FOLDER, TaskContext.get(), country, temporaryOutputFolder, targetOutputFolder);
+                    new ShardFlagBatchProcessor(fileHelper, priorityOutput.getTemporaryPath(), EventService.get(country),Rectangle.forLocated(countryShardMap.get(country)), numberOfPrioritizedOutputs);
+                }else
+                {
+                    priorityOutput = null;
+                    logger.error("Unable to create priority areas without knowing the shards that make up the country");
+                }
             }
             else
             {

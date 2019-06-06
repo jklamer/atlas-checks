@@ -13,6 +13,8 @@ import org.openstreetmap.atlas.geography.Rectangle;
 import org.openstreetmap.atlas.geography.atlas.items.AtlasEntity;
 import org.openstreetmap.atlas.geography.atlas.items.Edge;
 import org.openstreetmap.atlas.geography.atlas.items.ItemType;
+import org.openstreetmap.atlas.geography.atlas.items.Point;
+import org.openstreetmap.atlas.geography.atlas.items.Relation;
 import org.openstreetmap.atlas.geography.sharding.SlippyTile;
 
 import java.util.Collections;
@@ -85,6 +87,31 @@ public class CheckFlagSorterTest
         eventService.complete();
     }
 
+    @Test
+    public void testDifferentBucketBatches()
+    {
+        final AtomicLong checkFlagId = new AtomicLong();
+        final EventService eventService = EventService.get("testDifferentBucketBatches");
+        final Consumer<ShardFlagsBatchEvent> eventVerifier = shardFlagsBatchEvent -> Assert.assertEquals( shardFlagsBatchEvent.getShard(), SlippyTile.forName("13-7244-3244"));
+        final TestBatchProcessor processor = new TestBatchProcessor(eventVerifier).setExpectedBatches(5);
+        final CheckFlagSorter sorter = new CheckFlagSorter(testBounds, eventService);
+        eventService.register(processor);
+
+        final Edge edge1 = (Edge) this.getEntityWithName(ItemType.EDGE, "edge1");
+        final Edge edge2 = (Edge) this.getEntityWithName(ItemType.EDGE, "edge2");
+        final Edge edge3 = (Edge) this.getEntityWithName(ItemType.EDGE, "edge3");
+        final Edge edge4 = (Edge) this.getEntityWithName(ItemType.EDGE, "edge4");
+
+        final Point point1 = (Point) this.getEntityWithName(ItemType.POINT, "point1");
+        final Point point2 = (Point) this.getEntityWithName(ItemType.POINT, "point2");
+        final Point point3 = (Point) this.getEntityWithName(ItemType.POINT, "point3");
+
+        final Relation edge1point1 = (Relation) this.getEntityWithName(ItemType.RELATION, "relation1");
+        final Relation edges1Through3 = (Relation) this.getEntityWithName(ItemType.RELATION, "relation2");
+
+
+
+    }
 
     public AtlasEntity getEntityWithName(final ItemType itemType, final String name)
     {
